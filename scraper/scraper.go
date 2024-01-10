@@ -6,8 +6,6 @@ import (
 	"log"
 	"net/mail"
 	"net/url"
-	"os"
-	"os/signal"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -38,17 +36,17 @@ func Scrape(scrapedJSONFile string) error {
 	}
 	log.Println("UGCs to be processed:", len(ugcs))
 
-	c := make(chan os.Signal, 1)
 	errs := make(chan error)
-	signal.Notify(c, os.Interrupt)
-	go func(ugcs *[]ugcinfo.UGCInfo, errChan chan error) {
-		for sig := range c {
-			log.Println(sig, "detected, saving results")
-			if err := saveResults(*ugcs); err != nil {
-				errChan <- err
-			}
-		}
-	}(&ugcs, errs)
+	// c := make(chan os.Signal, 1)
+	// signal.Notify(c, os.Interrupt)
+	// go func(ugcs *[]ugcinfo.UGCInfo, errChan chan error) {
+	// 	for sig := range c {
+	// 		log.Println(sig, "detected, saving results")
+	// 		if err := saveResults(*ugcs); err != nil {
+	// 			errChan <- err
+	// 		}
+	// 	}
+	// }(&ugcs, errs)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -405,7 +403,7 @@ func calculateAPAndAI(ctx context.Context, links []string) (latestVideoTime int,
 					if errors.Is(err, utils.ErrAPIBusy) && verbose {
 						log.Println("error:", err, "Retrying")
 					} else if err != nil {
-						return backoff.Permanent(errors.Join(errors.New("unexpected error, skipping"), err))
+						log.Println("error:", err, "Retrying")
 					}
 					return err
 				}
@@ -423,7 +421,7 @@ func calculateAPAndAI(ctx context.Context, links []string) (latestVideoTime int,
 					if errors.Is(err, utils.ErrAPIBusy) && verbose {
 						log.Println("error:", err, "Retrying")
 					} else if err != nil {
-						return backoff.Permanent(errors.Join(errors.New("unexpected error, skipping"), err))
+						log.Println("error:", err, "Retrying")
 					}
 					return err
 				}
