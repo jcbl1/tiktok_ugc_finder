@@ -1,3 +1,4 @@
+// Package utils implements some utilities.
 package utils
 
 import (
@@ -6,6 +7,7 @@ import (
 	"strings"
 )
 
+// FindMails finds mails contained in str. If there are patterns LIKE an email address, they are appended to mails.
 func FindMails(str string, mails *[]*mail.Address) error {
 	re := regexp.MustCompile(`[a-zA-Z0-9\-]+[a-z0-9._%+\-]*@[a-zA-Z0-9\-]+[a-z0-9.\-]*\.[a-z]{2,4}`)
 	matches := re.FindAllString(str, -1)

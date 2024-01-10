@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// SaveScreenshot saves a screenshot (ss) in a png file.
 func SaveScreenshot(ss []byte) error {
 	tail := uuid.NewString()
 	tail = strings.Split(tail, "-")[0]

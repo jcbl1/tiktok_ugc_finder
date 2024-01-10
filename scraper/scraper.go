@@ -1,3 +1,6 @@
+// Package scraper provides a function to Scrape UGC info from a JSON file.
+//
+// A couple of variables can be set to make it function properly. The results are saved in a JSON file or XLSX file according according to the variable resultFormat.
 package scraper
 
 import (
@@ -19,24 +22,27 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+// Scrape scrapes UGC info according to a JSON file providing their unique IDs.
+//
+// It will supposingly save results anyway whether the process has finished successfully or not.
 func Scrape(scrapedJSONFile string) error {
-	ugcs, err := ugcinfo.FromJSON(scrapedJSONFile)
+	ugcs, err := ugcinfo.FromJSON(scrapedJSONFile) // gets UGCs from JSON.
 	if err != nil {
 		return err
 	}
-	if from < 0 || from >= len(ugcs) {
+	if from < 0 || from >= len(ugcs) { // sets from and to to a proper value.
 		from = len(ugcs)
 	}
 	if to < 0 || to >= len(ugcs) {
 		to = len(ugcs)
 	}
-	ugcs = ugcs[from:to]
-	if len(ugcs) > int(limit) {
+	ugcs = ugcs[from:to] // trims ugcs.
+	if len(ugcs) > int(limit) { // respects the limit.
 		ugcs = ugcs[:limit]
 	}
 	log.Println("UGCs to be processed:", len(ugcs))
 
-	errs := make(chan error)
+	errs := make(chan error) // defines a channel to receive errors (if any) in closures.
 	// c := make(chan os.Signal, 1)
 	// signal.Notify(c, os.Interrupt)
 	// go func(ugcs *[]ugcinfo.UGCInfo, errChan chan error) {
@@ -48,26 +54,24 @@ func Scrape(scrapedJSONFile string) error {
 	// 	}
 	// }(&ugcs, errs)
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background()) // defines the main context
 	defer cancel()
-	defer func(ugcs *[]ugcinfo.UGCInfo, errChan chan error) {
+	defer func(ugcs *[]ugcinfo.UGCInfo, errChan chan error) { // saves to file BEFORE ctx is canceled and this function is done.
 		if err := saveResults(*ugcs); err != nil {
 			errChan <- err
 		}
 	}(&ugcs, errs)
-	if err := scrapeProfileVideos(ctx, &ugcs); err != nil {
-		return err
-	}
-
-	if err := saveResults(ugcs); err != nil {
+	if err := scrapeProfileVideos(ctx, &ugcs); err != nil { // processes ugcs
 		return err
 	}
 
 	return nil
 }
+
+// saveResults uses [fileopers] to save results.
 func saveResults(ugcs []ugcinfo.UGCInfo) error {
 	log.Println("Saving results")
-	switch resultFormat {
+	switch resultFormat { //respects resultFormat
 	case "json":
 		if err := fileopers.SaveResultsAsJSON(ugcs); err != nil {
 			return err
@@ -81,73 +85,73 @@ func saveResults(ugcs []ugcinfo.UGCInfo) error {
 	return nil
 }
 
+// scrapeProfileVideos does the real job for scraping.
+//
+// It allocates a browser and simulates the process of navigating, clicking and etc. ctxParent makes it easier to cancel the process when needed. ugcs is passed as a pointer so any changes will immediately take effect on the ugcs in Scrape(). An error is returned if it encounters any error that is due to the function itself (i.e. "Internal Error" is supposed to be returned).
 func scrapeProfileVideos(ctxParent context.Context, ugcs *[]ugcinfo.UGCInfo) error {
-	opts := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", false), chromedp.DisableGPU)
+	opts := append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", false), chromedp.DisableGPU) // customizes options used to allocate a browser.
 	var allocCtx context.Context
 	var cancel context.CancelFunc
-	if headless {
+	if headless { // sets allocCtx to the default one if headless is true, or to the customized one if headless is false.
 		allocCtx, cancel = chromedp.NewExecAllocator(ctxParent, chromedp.DefaultExecAllocatorOptions[:]...)
 	} else {
 		allocCtx, cancel = chromedp.NewExecAllocator(ctxParent, opts...)
 	}
 	defer cancel()
-	ctx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(log.Printf))
+	ctx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(log.Printf)) // gets the browser context
 	defer cancel()
 
-	// Set viewport
-	if err := chromedp.Run(
+	if err := chromedp.Run( // sets the viewport
 		ctx,
 		chromedp.EmulateViewport(1280, 720),
 	); err != nil {
 		return err
 	}
 
-	if err := chromedp.Run(
+	if err := chromedp.Run( // navigates to the first user profile page.
 		ctx,
 		chromedp.Navigate(TIKTOK+"/@"+(*ugcs)[0].UniqueID),
 	); err != nil {
 		return err
 	}
 
-	// get refresh button node
-	var refreshButtons []*cdp.Node
+	var refreshButtons []*cdp.Node // gets refresh button nodes
 	if err := chromedp.Run(
 		ctx,
 		getRefreshButtons(&refreshButtons),
 	); err != nil {
 		return err
 	}
-	// click on the refresh button
-	if err := chromedp.Run(
+	
+	if err := chromedp.Run( // clicks on the refresh button
 		ctx,
 		chromedp.MouseClickNode(refreshButtons[0], chromedp.ButtonLeft),
 	); err != nil {
 		return err
 	}
 
-	// get profile video links
-	links, err := getProfileVideoLinks(ctx)
+	links, err := getProfileVideoLinks(ctx) // gets profile video links
 	if err != nil {
 		return err
 	}
 
-	sem := semaphore.NewWeighted(5)
+	sem := semaphore.NewWeighted(5) // use semaphore to limit the amount of processes asking API server for help.
 
-	errs := make(chan error, len(*ugcs))
-	finishes := make(chan int, 2*len(*ugcs))
-	// get ap ai
-	go func(ctx context.Context, errChan chan error, finishChan chan int) {
+	errs := make(chan error, len(*ugcs)) // error channel used to detect errors
+	finishes := make(chan int, len(*ugcs)) // channel used to check if all goroutines are done.
+
+	go func(ctx context.Context, errChan chan error, finishChan chan int) { // gets AP and AI
 		if verbose {
 			log.Println("Getting AP and AI of the first user")
 		}
-		if lt, ap, ai, err := calculateAPAndAI(ctx, links); err != nil {
+		if lt, ap, ai, err := calculateAPAndAI(ctx, links); err != nil { // calculates AP and AI and if no error, stores them.
 			errChan <- err
 		} else {
 			(*ugcs)[0].AP = ap
 			(*ugcs)[0].AI = ai
 			(*ugcs)[0].LatestVideoTime = time.Unix(int64(lt), 0)
 		}
-		finishChan <- 0
+		finishChan <- 0 // goroutine finished
 	}(ctx, errs, finishes)
 
 	// if verbose {
@@ -162,8 +166,7 @@ func scrapeProfileVideos(ctxParent context.Context, ugcs *[]ugcinfo.UGCInfo) err
 
 	// }
 
-	// get emails
-	var mails []*mail.Address
+	var mails []*mail.Address // gets emails
 	if err := findEmails(ctx, &mails); err != nil {
 		return err
 	}
@@ -177,7 +180,7 @@ func scrapeProfileVideos(ctxParent context.Context, ugcs *[]ugcinfo.UGCInfo) err
 	// 	chromedp.Sleep(time.Hour),
 	// )
 
-	for i := range (*ugcs)[1:] {
+	for i := range (*ugcs)[1:] { // for each ugcs left, do the almost same thing as above.
 		if err := chromedp.Run(
 			ctx,
 			chromedp.Navigate(TIKTOK+"/@"+(*ugcs)[i+1].UniqueID),
@@ -191,7 +194,7 @@ func scrapeProfileVideos(ctxParent context.Context, ugcs *[]ugcinfo.UGCInfo) err
 		}
 		log.Printf("Getting AP and AI of the %dth user\n", i+2)
 		go func(ctx context.Context, errChan chan error, finishChan chan int, index int) {
-			if err := sem.Acquire(context.TODO(), 1); err != nil {
+			if err := sem.Acquire(context.TODO(), 1); err != nil { // acquires on semaphore
 				errChan <- err
 			}
 			// log.Printf("👻goroutine started[%d]", index)
@@ -204,12 +207,11 @@ func scrapeProfileVideos(ctxParent context.Context, ugcs *[]ugcinfo.UGCInfo) err
 				(*ugcs)[index].LatestVideoTime = time.Unix(int64(lt), 0)
 			}
 			// log.Println("👻goroutine finished")
-			sem.Release(1)
+			sem.Release(1) // releases to semaphore
 			finishChan <- index
 		}(ctx, errs, finishes, i+1)
 
-		// get emails
-		if verbose {
+		if verbose { // gets mails
 			log.Println("Getting emails")
 		}
 		var mails []*mail.Address
@@ -221,14 +223,14 @@ func scrapeProfileVideos(ctxParent context.Context, ugcs *[]ugcinfo.UGCInfo) err
 		}
 	}
 
-	finished := 0
+	finished := 0 // variable to count how many goroutines are finished.
 	for {
 		select {
 		case err := <-errs:
 			return err
 		case <-ctx.Done():
 			return errors.New("canceled")
-		case <-finishes:
+		case <-finishes: // finished increments by one and if it equals to the length of ugcs, this function stops waiting and returns nil
 			finished++
 			// log.Printf("⛳️finishes received[%d]. finished:%d", i, finished)
 			if finished == len(*ugcs) {
@@ -238,6 +240,7 @@ func scrapeProfileVideos(ctxParent context.Context, ugcs *[]ugcinfo.UGCInfo) err
 	}
 }
 
+// getProfileVideoLinks gets video links that are not pinned on a profile page.
 func getProfileVideoLinks(ctx context.Context) ([]string, error) {
 	var anchors []*cdp.Node
 	var videoCount uint = 0
@@ -348,6 +351,7 @@ func debugLog(s string) chromedp.ActionFunc {
 	})
 }
 
+// getRefreshButtons returns a task list to get refreshButtons.
 func getRefreshButtons(refreshButtons *[]*cdp.Node) chromedp.Tasks {
 	return chromedp.Tasks{
 		// chromedp.WaitVisible(`//*[@id="login-modal-title"]`),
@@ -386,6 +390,7 @@ func getRefreshButtons(refreshButtons *[]*cdp.Node) chromedp.Tasks {
 	}
 }
 
+// calculateAPAndAI trys to get video statistics from API server and will keep trying if it meets errors from other than ctx canceled.
 func calculateAPAndAI(ctx context.Context, links []string) (latestVideoTime int, ap int, ai float32, err error) {
 	var vss []utils.VideoStats
 	for i, link := range links {
@@ -393,7 +398,7 @@ func calculateAPAndAI(ctx context.Context, links []string) (latestVideoTime int,
 			log.Printf("Getting result of the %dth link: %s", i+1, link)
 		}
 		var vs utils.VideoStats
-		if i == 0 {
+		if i == 0 { // means the latest video
 			err = backoff.Retry(func() error {
 				select {
 				case <-ctx.Done():
@@ -433,7 +438,7 @@ func calculateAPAndAI(ctx context.Context, links []string) (latestVideoTime int,
 		vss = append(vss, vs)
 	}
 
-	if len(vss) != 0 {
+	if len(vss) != 0 { // calculation
 		// log.Println("👻vss:",vss)
 		total := 0
 		ai_total := float32(0)
@@ -451,6 +456,7 @@ func calculateAPAndAI(ctx context.Context, links []string) (latestVideoTime int,
 	return
 }
 
+// findEmails finds mail on the profile page.
 func findEmails(ctx context.Context, mails *[]*mail.Address) error {
 	var bodyText string
 	if err := chromedp.Run(

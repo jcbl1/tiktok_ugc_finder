@@ -10,11 +10,13 @@ import (
 
 var apiServer url.URL
 
+// VideoStats unites videos statistics cared in a structure.
 type VideoStats struct {
 	DiggCount int `json:"digg_count"`
 	PlayCount int `json:"play_count"`
 }
 
+// APIResult represents the response from API server.
 type APIResult struct {
 	CreateTime int        `json:"create_time"`
 	Statistics VideoStats `json:"statistics"`
@@ -27,6 +29,7 @@ func SetAPIServer(a *url.URL) {
 	}
 }
 
+// GetVideoStatsFromAPI sends request to apiServer regarding url. It returns createdTime (time the video was posted) and vs (video statistics).
 func GetVideoStatsFromAPI(url string) (createdTime int, vs VideoStats, err error) {
 	prefix := apiServer.Scheme + "://" + apiServer.Hostname() + ":" + apiServer.Port() + "/api?url="
 	// fmt.Println(prefix + url)
