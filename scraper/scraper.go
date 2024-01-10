@@ -39,25 +39,35 @@ func Scrape(scrapedJSONFile string) error {
 	log.Println("UGCs to be processed:", len(ugcs))
 
 	c := make(chan os.Signal, 1)
+	errs := make(chan error)
 	signal.Notify(c, os.Interrupt)
-	go func() {
+	go func(ugcs *[]ugcinfo.UGCInfo, errChan chan error) {
 		for sig := range c {
 			log.Println(sig, "detected, saving results")
-			switch resultFormat {
-			case "json":
-				fileopers.SaveResultsAsJSON(ugcs)
-			case "xlsx":
-				fileopers.SaveResultsAsXLSX(ugcs)
+			if err := saveResults(*ugcs); err != nil {
+				errChan <- err
 			}
 		}
-	}()
+	}(&ugcs, errs)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	defer func(ugcs *[]ugcinfo.UGCInfo, errChan chan error) {
+		if err := saveResults(*ugcs); err != nil {
+			errChan <- err
+		}
+	}(&ugcs, errs)
 	if err := scrapeProfileVideos(ctx, &ugcs); err != nil {
 		return err
 	}
 
+	if err := saveResults(ugcs); err != nil {
+		return err
+	}
+
+	return nil
+}
+func saveResults(ugcs []ugcinfo.UGCInfo) error {
 	log.Println("Saving results")
 	switch resultFormat {
 	case "json":
