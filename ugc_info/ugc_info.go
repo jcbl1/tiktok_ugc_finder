@@ -1,3 +1,4 @@
+// Package ugcinfo defines some UGC structures.
 package ugcinfo
 
 import (
@@ -12,6 +13,7 @@ import (
 // 	PlayCount int `json:"play_count"`
 // }
 
+// UGCInfo is a structure for cared infomation about a UGC.
 type UGCInfo struct {
 	Name            string    `json:"name"`
 	Signature       string    `json:"signature"`
@@ -30,6 +32,7 @@ type UGCInfo struct {
 // 	return fmt.Sprintf("%s", data)
 // }
 
+// HashtagResultAuthor represents the result of JSON unmarshalling of hashtag results in the field of .author.
 type HashtagResultAuthor struct {
 	AvatarMedium string `json:"avatarMedium"`
 	ID           string `json:"id"`
@@ -38,6 +41,7 @@ type HashtagResultAuthor struct {
 	UniqueID     string `json:"uniqueId"`
 }
 
+// HashtagResultAuthorStats represents the result of JSON unmarshalling of hashtag results in the field of .authorStats
 type HashtagResultAuthorStats struct {
 	DiggCount     int `json:"diggCount"`
 	FollowerCount int `json:"followerCount"`
@@ -49,14 +53,15 @@ type HashtagResultAuthorStats struct {
 // 	Desc string `json:"desc"`
 // }
 
-type HashtagResultStats struct {
-	CollectCount int `json:"collectCount"`
-	CommentCount int `json:"commentCount"`
-	DiggCount    int `json:"diggCount"`
-	PlayCount    int `json:"playCount"`
-	ShareCount   int `json:"shareCount"`
-}
+// type HashtagResultStats struct {
+// 	CollectCount int `json:"collectCount"`
+// 	CommentCount int `json:"commentCount"`
+// 	DiggCount    int `json:"diggCount"`
+// 	PlayCount    int `json:"playCount"`
+// 	ShareCount   int `json:"shareCount"`
+// }
 
+// HashtagResult represents the result of JSON unmarshalling of hashtag results.
 type HashtagResult struct {
 	Author      HashtagResultAuthor      `json:"author"`
 	AuthorStats HashtagResultAuthorStats `json:"authorStats"`
@@ -65,8 +70,10 @@ type HashtagResult struct {
 	Desc        string `json:"desc"`
 }
 
+// HashtagResults represents a slice of HashtagResult
 type HashtagResults []HashtagResult
 
+// FromJSON reads from scrapedJSONFile and returns the UGCInfos in it.
 func FromJSON(scrapedJSONFile string) ([]UGCInfo, error) {
 	var ugcs []UGCInfo
 	f, err := os.Open(scrapedJSONFile)

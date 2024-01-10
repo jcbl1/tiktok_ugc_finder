@@ -4,6 +4,7 @@ import (
 	"log"
 )
 
+// Variables that are used for filtering and saving results.
 var (
 	recentVideosNum                    uint
 	resultFormat                       string

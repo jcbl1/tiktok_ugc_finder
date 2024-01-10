@@ -2,11 +2,13 @@ package fileopers
 
 import "log"
 
+// Variables used by this package.
 var (
 	workingDir string
 	verbose    bool
 )
 
+// SetWorkingDir sets the working directory.
 func SetWorkingDir(wd string) {
 	workingDir = wd
 	if verbose {
@@ -14,6 +16,7 @@ func SetWorkingDir(wd string) {
 	}
 }
 
+// SetVerbose sets verbose to v.
 func SetVerbose(v bool) {
 	verbose = v
 }

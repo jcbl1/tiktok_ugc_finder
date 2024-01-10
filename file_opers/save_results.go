@@ -1,3 +1,4 @@
+// Package fileopers provides subsidiary functions that are I/O related.
 package fileopers
 
 import (
@@ -18,6 +19,7 @@ func genFilename(ext string) string {
 	return workingDir + "/result-" + time.Now().Format("20060102-") + uuidHead + "." + ext
 }
 
+// SaveResultsAsJSON saves ugcs in a JSON file.
 func SaveResultsAsJSON(ugcs []ugcinfo.UGCInfo) error {
 	filename := genFilename("json")
 	f, err := os.Create(filename)
@@ -40,18 +42,19 @@ func SaveResultsAsJSON(ugcs []ugcinfo.UGCInfo) error {
 	return nil
 }
 
+// SaveResultsAsXLSX saves ugcs in an XLSX file.
 func SaveResultsAsXLSX(ugcs []ugcinfo.UGCInfo) error {
-	excel := excelize.NewFile()
+	excel := excelize.NewFile() // creates a new working book.
 	defer excel.Close()
 
-	sheet := "Sheet1"
+	sheet := "Sheet1" // ensures the sheet name is "Sheet1"
 	excel.SetSheetName("Sheet1", sheet)
 
-	if err := setSheetHeaders(excel, sheet); err != nil {
+	if err := setSheetHeaders(excel, sheet); err != nil { // sets styles of the first row.
 		return err
 	}
 
-	for i, ugc := range ugcs {
+	for i, ugc := range ugcs { // writes each ugc to Sheet1 of excel.
 		if err := excel.SetCellStr(sheet, fmt.Sprintf("A%d", i+2), ugc.Name); err != nil {
 			return err
 		}
@@ -84,9 +87,8 @@ func SaveResultsAsXLSX(ugcs []ugcinfo.UGCInfo) error {
 		}
 	}
 
-	uuidHead := strings.Split(uuid.NewString(), "-")[0]
-	filename := workingDir + "/result-" + time.Now().Format("20060102-") + uuidHead + ".xlsx"
-	if err := excel.SaveAs(filename); err != nil {
+	filename:=genFilename("xlsx")
+	if err := excel.SaveAs(filename); err != nil { // saves to file
 		return err
 	}
 	logResultsSaved(filename)
