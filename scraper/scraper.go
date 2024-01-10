@@ -36,7 +36,7 @@ func Scrape(scrapedJSONFile string) error {
 	if to < 0 || to >= len(ugcs) {
 		to = len(ugcs)
 	}
-	ugcs = ugcs[from:to] // trims ugcs.
+	ugcs = ugcs[from:to]        // trims ugcs.
 	if len(ugcs) > int(limit) { // respects the limit.
 		ugcs = ugcs[:limit]
 	}
@@ -122,7 +122,7 @@ func scrapeProfileVideos(ctxParent context.Context, ugcs *[]ugcinfo.UGCInfo) err
 	); err != nil {
 		return err
 	}
-	
+
 	if err := chromedp.Run( // clicks on the refresh button
 		ctx,
 		chromedp.MouseClickNode(refreshButtons[0], chromedp.ButtonLeft),
@@ -137,7 +137,7 @@ func scrapeProfileVideos(ctxParent context.Context, ugcs *[]ugcinfo.UGCInfo) err
 
 	sem := semaphore.NewWeighted(5) // use semaphore to limit the amount of processes asking API server for help.
 
-	errs := make(chan error, len(*ugcs)) // error channel used to detect errors
+	errs := make(chan error, len(*ugcs))   // error channel used to detect errors
 	finishes := make(chan int, len(*ugcs)) // channel used to check if all goroutines are done.
 
 	go func(ctx context.Context, errChan chan error, finishChan chan int) { // gets AP and AI

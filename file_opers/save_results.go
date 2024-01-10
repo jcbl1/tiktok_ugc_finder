@@ -87,7 +87,7 @@ func SaveResultsAsXLSX(ugcs []ugcinfo.UGCInfo) error {
 		}
 	}
 
-	filename:=genFilename("xlsx")
+	filename := genFilename("xlsx")
 	if err := excel.SaveAs(filename); err != nil { // saves to file
 		return err
 	}

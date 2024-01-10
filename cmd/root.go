@@ -58,13 +58,13 @@ func root(cmd *cobra.Command, args []string) {
 		log.Println("verbose mode")
 	}
 	fileopers.SetWorkingDir(path.Clean(workingDir)) // sets working directory used by fileopers
-	scraper.SetVerbose(verbose) // sets verbose mode for [scraper]
+	scraper.SetVerbose(verbose)                     // sets verbose mode for [scraper]
 	scraper.SetRecentVideosNum(recentVideosNum)
 	scraper.SetResultFormat(resultFormat)
 	scraper.SetLimit(limit)
 	scraper.SetHeadless(headless)
 	scraper.SetFromTo(from, to)
-	ugcinfo.SetVerbose(verbose) //sets verbose mode for [ugcinfo]
+	ugcinfo.SetVerbose(verbose)                                                                //sets verbose mode for [ugcinfo]
 	if err := ugcinfo.SetMinMaxFollowerCount(minFollowerCount, maxFollowerCount); err != nil { // sets minFollowerCount and maxFollowerCount for ugcinfo and crashes on error.
 		log.Fatalln(err)
 	}
@@ -72,7 +72,7 @@ func root(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	utils.SetAPIServer(as) // sets API server used by [utils]
+	utils.SetAPIServer(as)                                              // sets API server used by [utils]
 	if err := scraper.Scrape(path.Clean(scrapedJSONFile)); err != nil { // starts the scraping process, watching for errors.
 		log.Fatalln(err)
 	}
