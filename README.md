@@ -1,1 +1,3 @@
-# 不要在提交中包含个人的测试信息！！
+## TODO
+
+- [ ] subcammand "mend": fix "0" AP and AI in the result file
