@@ -193,12 +193,12 @@ func scrapeProfileVideos(ctxParent context.Context, ugcs *[]ugcinfo.UGCInfo) err
 		if err != nil {
 			return err
 		}
-		log.Printf("Getting AP and AI of the %dth user\n", i+2)
 		go func(ctx context.Context, errChan chan error, finishChan chan int, index int) {
 			if err := sem.Acquire(context.TODO(), 1); err != nil { // acquires on semaphore
 				errChan <- err
 			}
 			// log.Printf("👻goroutine started[%d]", index)
+			log.Printf("Getting AP and AI of the %dth user\n", index+1)
 			if lt, ap, ai, err := calculateAPAndAI(ctx, links); err != nil {
 				errChan <- err
 			} else {
