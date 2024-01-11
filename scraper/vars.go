@@ -6,13 +6,13 @@ import (
 
 // Variables that are used for filtering and saving results.
 var (
-	recentVideosNum                    uint
-	resultFormat                       string
-	verbose                            bool
-	limit                              uint
-	headless                           bool
-	minFollowerCount, maxFollowerCount int
-	from, to                           int
+	recentVideosNum uint
+	resultFormat    string
+	verbose         bool
+	limit           uint
+	headless        bool
+	// minFollowerCount, maxFollowerCount int
+	from, to int
 )
 
 // func SetVars(rvn uint,rf string,v bool,l uint,h bool,m,M string,fr,t int){

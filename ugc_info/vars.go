@@ -2,6 +2,7 @@ package ugcinfo
 
 import (
 	"log"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -47,7 +48,7 @@ func SetMinMaxFollowerCount(m, M string) error {
 			maxFollowerCount = max
 		}
 	} else {
-		maxFollowerCount = -1
+		maxFollowerCount = math.MaxInt
 	}
 
 	if verbose {

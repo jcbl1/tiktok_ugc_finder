@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/mail"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -312,7 +313,7 @@ func getProfileVideoLinks(ctx context.Context) ([]string, error) {
 			if err != nil {
 				return nil, err
 			}
-			if !(u.Hostname() == "") {
+			if !(u.Hostname() == "") && validateLink(link) {
 				links = append(links, anchor.AttributeValue("href"))
 			}
 		}
@@ -329,6 +330,16 @@ func getProfileVideoLinks(ctx context.Context) ([]string, error) {
 	}
 
 	return links, nil
+}
+
+func validateLink(link string) bool {
+	videoKeywordCount := 0
+	for _, k := range strings.Split(link, "/") {
+		if strings.ToLower(k) == "video" {
+			videoKeywordCount++
+		}
+	}
+	return videoKeywordCount > 0
 }
 
 func scrollToBottom() chromedp.ActionFunc {
