@@ -139,6 +139,41 @@ func setSheetHeaders(excel *excelize.File, sheet string) error {
 	return nil
 }
 
+func Merge(ugcs *[]ugcinfo.UGCInfo, filename string) error {
+	excel, err := excelize.OpenFile(filename)
+	if err != nil {
+		return err
+	}
+	defer excel.Close()
+	sheetName := "Sheet1"
+	sheet, err := excel.GetRows(sheetName)
+	if err != nil {
+		return err
+	}
+	for i, row := range sheet {
+		if row[5] == "0" {
+			for _, ugc := range *ugcs {
+				if ugc.UniqueID == row[2] {
+					if err := excel.SetCellInt(sheetName, fmt.Sprintf("F%d", i+1), ugc.AP); err != nil {
+						return err
+					}
+					if err := excel.SetCellFloat(sheetName, fmt.Sprintf("G%d", i+1), float64(ugc.AP), 4, 32); err != nil {
+						return err
+					}
+					break
+				}
+			}
+		}
+	}
+
+	if err := excel.Save(); err != nil {
+		return err
+	}
+	logResultsSaved(filename)
+
+	return nil
+}
+
 func logResultsSaved(filename string) {
 	log.Println("Results saved at", filename)
 }

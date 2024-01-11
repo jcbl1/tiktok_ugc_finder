@@ -69,6 +69,30 @@ func Scrape(scrapedJSONFile string) error {
 	return nil
 }
 
+// TODO comments
+func ScrapeUnscraped(filename string) error {
+	ugcs, err := ugcinfo.FromFile(filename)
+	if err != nil {
+		return err
+	}
+	log.Println("UGCs to be processed:", len(ugcs))
+
+	errs := make(chan error)                                // defines a channel to receive errors (if any) in closures.
+	ctx, cancel := context.WithCancel(context.Background()) // defines the main context
+	defer cancel()
+	defer func(ugcs *[]ugcinfo.UGCInfo, errChan chan error) { // saves to file BEFORE ctx is canceled and this function is done.
+		if err := saveResultsToExistingFile(ugcs, filename); err != nil {
+			errChan <- err
+		}
+	}(&ugcs, errs)
+	if err := scrapeProfileVideos(ctx, &ugcs); err != nil { // processes ugcs
+		return err
+	}
+
+	return nil
+
+}
+
 // saveResults uses [fileopers] to save results.
 func saveResults(ugcs []ugcinfo.UGCInfo) error {
 	log.Println("Saving results")
@@ -81,6 +105,15 @@ func saveResults(ugcs []ugcinfo.UGCInfo) error {
 		if err := fileopers.SaveResultsAsXLSX(ugcs); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// TODO comments
+func saveResultsToExistingFile(ugcs *[]ugcinfo.UGCInfo, filename string) error {
+	if err := fileopers.Merge(ugcs, filename); err != nil {
+		return err
 	}
 
 	return nil
