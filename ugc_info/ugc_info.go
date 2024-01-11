@@ -5,7 +5,11 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"strconv"
+	"strings"
 	"time"
+
+	"github.com/xuri/excelize/v2"
 )
 
 // type VideoStats struct {
@@ -105,4 +109,57 @@ func FromJSON(scrapedJSONFile string) ([]UGCInfo, error) {
 	}
 
 	return ugcs, nil
+}
+
+// TODO comments
+func FromFile(filename string) ([]UGCInfo, error) {
+	var ugcs []UGCInfo
+	f, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	ext := strings.ToLower(strings.Split(filename, ".")[len(strings.Split(filename, "."))-1])
+	switch ext {
+	case "xlsx":
+		if err := fromExcel(f, &ugcs); err != nil {
+			return nil, err
+		}
+	case "json":
+		if err := fromJSON(f, &ugcs); err != nil {
+			return nil, err
+		}
+	}
+
+	return ugcs, nil
+}
+
+func fromExcel(f *os.File, ugcs *[]UGCInfo) error {
+	excel, err := excelize.OpenReader(f)
+	if err != nil {
+		return err
+	}
+	defer excel.Close()
+	sheet, err := excel.GetRows("Sheet1")
+	if err != nil {
+		return err
+	}
+	for _, row := range sheet {
+		if row[5] == "0" {
+			fc, _ := strconv.Atoi(row[3])
+			*ugcs = append(*ugcs, UGCInfo{
+				Name:          row[0],
+				Signature:     row[1],
+				UniqueID:      row[2],
+				FollowerCount: fc,
+			})
+		}
+	}
+
+	return nil
+}
+
+func fromJSON(f *os.File, ugcs *[]UGCInfo) error {
+	return nil
 }
